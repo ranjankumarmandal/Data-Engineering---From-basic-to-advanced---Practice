@@ -1,0 +1,502 @@
+tables:
+  - name: kafka_source
+    type: source
+    connector:
+      type: kafka
+      version: 0.11
+      topic: input-topic
+      properties:
+        bootstrap.servers: localhost:9092
+        group.id: flink-consumer-group
+        auto.offset.reset: latest
+      format:
+        type: json
+        fail-on-missing-field: false
+        ignore-parse-errors: true
+    schema:
+      - name: id
+        data-type: INT
+      - name: name
+        data-type: STRING
+      - name: age
+        data-type: INT
+      - name: salary
+        data-type: DOUBLE
+      - name: timestamp
+        data-type: TIMESTAMP(3)
+        rowtime:
+          timestamps:
+            type: from-field
+            from: timestamp
+          watermarks:
+            type: periodic
+            granularity: SECONDS
+    watermark-strategy:
+      type: periodic
+      interval: 5000
+
+  - name: kafka_sink
+    type: sink
+    connector:
+      type: kafka
+      version: 0.11
+      topic: output-topic
+      properties:
+        bootstrap.servers: localhost:9092
+      format:
+        type: json
+    schema:
+      - name: id
+        data-type: INT
+      - name: name
+        data-type: STRING
+      - name: processed_salary
+        data-type: DOUBLE
+
+  - name: jdbc_source
+    type: source
+    connector:
+      type: jdbc
+      url: jdbc:mysql://localhost:3306/database
+      username: user
+      password: password
+      table-name: employees
+      driver: com.mysql.jdbc.Driver
+    schema:
+      - name: employee_id
+        data-type: BIGINT
+      - name: employee_name
+        data-type: STRING
+      - name: department
+        data-type: STRING
+      - name: hire_date
+        data-type: DATE
+
+  - name: jdbc_sink
+    type: sink
+    connector:
+      type: jdbc
+      url: jdbc:mysql://localhost:3306/database
+      username: user
+      password: password
+      table-name: processed_employees
+      driver: com.mysql.jdbc.Driver
+    schema:
+      - name: employee_id
+        data-type: BIGINT
+      - name: employee_name
+        data-type: STRING
+      - name: total_salary
+        data-type: DOUBLE
+
+  - name: file_source_csv
+    type: source
+    connector:
+      type: filesystem
+      path: /path/to/input.csv
+      format:
+        type: csv
+        field-delimiter: ','
+        quote-character: '"'
+        allow-comments: true
+        ignore-parse-errors: true
+    schema:
+      - name: field1
+        data-type: STRING
+      - name: field2
+        data-type: INT
+      - name: field3
+        data-type: DOUBLE
+
+  - name: file_sink_parquet
+    type: sink
+    connector:
+      type: filesystem
+      path: /path/to/output
+      format:
+        type: parquet
+    schema:
+      - name: field1
+        data-type: STRING
+      - name: field2
+        data-type: INT
+      - name: field3
+        data-type: DOUBLE
+
+  - name: elasticsearch_sink
+    type: sink
+    connector:
+      type: elasticsearch
+      hosts: http://localhost:9200
+      index: employee-index
+      document-type: employee
+      version: 7
+    schema:
+      - name: id
+        data-type: STRING
+      - name: data
+        data-type: STRING
+
+  - name: hudi_source
+    type: source
+    connector:
+      type: hudi
+      path: /path/to/hudi-table
+      table.type: copy_on_write
+    schema:
+      - name: id
+        data-type: STRING
+      - name: name
+        data-type: STRING
+      - name: ts
+        data-type: TIMESTAMP(3)
+
+  - name: hudi_sink
+    type: sink
+    connector:
+      type: hudi
+      path: /path/to/hudi-table
+      table.type: merge_on_read
+      operation: upsert
+    schema:
+      - name: id
+        data-type: STRING
+      - name: name
+        data-type: STRING
+      - name: ts
+        data-type: TIMESTAMP(3)
+
+  - name: iceberg_source
+    type: source
+    connector:
+      type: iceberg
+      catalog-type: hadoop
+      warehouse: /path/to/warehouse
+      database: default
+      table: employees
+    schema:
+      - name: id
+        data-type: BIGINT
+      - name: name
+        data-type: STRING
+      - name: department
+        data-type: STRING
+
+  - name: iceberg_sink
+    type: sink
+    connector:
+      type: iceberg
+      catalog-type: hadoop
+      warehouse: /path/to/warehouse
+      database: default
+      table: employees
+    schema:
+      - name: id
+        data-type: BIGINT
+      - name: name
+        data-type: STRING
+      - name: department
+        data-type: STRING
+
+  - name: pulsar_source
+    type: source
+    connector:
+      type: pulsar
+      service-url: pulsar://localhost:6650
+      admin-url: http://localhost:8080
+      topic: persistent://public/default/input-topic
+      subscription-name: flink-subscription
+      discovery-strategy: http
+    schema:
+      - name: id
+        data-type: STRING
+      - name: value
+        data-type: STRING
+
+  - name: pulsar_sink
+    type: sink
+    connector:
+      type: pulsar
+      service-url: pulsar://localhost:6650
+      admin-url: http://localhost:8080
+      topic: persistent://public/default/output-topic
+    schema:
+      - name: id
+        data-type: STRING
+      - name: value
+        data-type: STRING
+
+  - name: datagen_source
+    type: source
+    connector:
+      type: datagen
+      rows-per-second: 100
+      number-of-rows: 1000
+    schema:
+      - name: id
+        data-type: INT
+      - name: random_value
+        data-type: DOUBLE
+
+  - name: blackhole_sink
+    type: sink
+    connector:
+      type: blackhole
+
+  - name: print_sink
+    type: sink
+    connector:
+      type: print
+      print-identifier: OUTPUT
+
+  - name: redis_sink
+    type: sink
+    connector:
+      type: redis
+      mode: cluster
+      host: localhost
+      port: 6379
+      db: 0
+      password: password
+      ttl: 3600
+    schema:
+      - name: key
+        data-type: STRING
+      - name: value
+        data-type: STRING
+
+  - name: cassandra_sink
+    type: sink
+    connector:
+      type: cassandra
+      contact-points: localhost:9042
+      keyspace: my_keyspace
+      table-name: employees
+    schema:
+      - name: id
+        data-type: BIGINT
+      - name: name
+        data-type: STRING
+      - name: salary
+        data-type: DOUBLE
+
+  - name: rabbitmq_source
+    type: source
+    connector:
+      type: rabbitmq
+      host: localhost
+      port: 5672
+      username: guest
+      password: guest
+      virtual-host: /
+      queue: input-queue
+    schema:
+      - name: id
+        data-type: STRING
+      - name: message
+        data-type: STRING
+
+  - name: rabbitmq_sink
+    type: sink
+    connector:
+      type: rabbitmq
+      host: localhost
+      port: 5672
+      username: guest
+      password: guest
+      virtual-host: /
+      exchange: output-exchange
+      routing-key: output-key
+    schema:
+      - name: id
+        data-type: STRING
+      - name: message
+        data-type: STRING
+
+  - name: kinesis_source
+    type: source
+    connector:
+      type: kinesis
+      region: us-west-2
+      stream: input-stream
+      aws.accessKeyId: access-key
+      aws.secretKey: secret-key
+    schema:
+      - name: partition_key
+        data-type: STRING
+      - name: data
+        data-type: STRING
+
+  - name: kinesis_sink
+    type: sink
+    connector:
+      type: kinesis
+      region: us-west-2
+      stream: output-stream
+      aws.accessKeyId: access-key
+      aws.secretKey: secret-key
+    schema:
+      - name: partition_key
+        data-type: STRING
+      - name: data
+        data-type: STRING
+
+functions:
+  - name: scalar_function
+    type: scalar
+    from: class.name.CustomScalarFunction
+    language: JAVA
+
+  - name: table_function
+    type: table
+    from: class.name.CustomTableFunction
+    language: JAVA
+
+  - name: aggregate_function
+    type: aggregate
+    from: class.name.CustomAggregateFunction
+    language: JAVA
+
+execution:
+  checkpointing:
+    enabled: true
+    interval: 5000
+    mode: EXACTLY_ONCE
+    timeout: 60000
+    min-pause: 1000
+    max-concurrent: 1
+    externalized-checkpoint:
+      enabled: true
+      cleanup: RETAIN_ON_CANCELLATION
+    unaligned: false
+    tolerable-failure-number: 3
+    tolerable-failure-interval: 60000
+
+  restart-strategy:
+    type: fixed-delay
+    attempts: 3
+    delay: 10000
+
+  parallelism:
+    default: 4
+    source: 2
+    sink: 2
+
+  state:
+    backend: rocksdb
+    checkpoint-dir: file:///tmp/flink-checkpoints
+    savepoints-dir: file:///tmp/flink-savepoints
+    rocksdb:
+      localdir: /tmp/rocksdb
+
+  time-characteristic: event-time
+
+  table:
+    planner: blink
+    exec:
+      state:
+        backend: rocksdb
+      checkpointing:
+        mode: EXACTLY_ONCE
+        interval: 5000
+      mini-batch:
+        enabled: true
+        allow-latency: 1000
+    source:
+      idle-timeout: 60000
+    sink:
+      buffer-flush:
+        max-size: 1000
+        max-time: 1000
+
+deployment:
+  response-timeout: 5000
+  gateway-address: localhost:8081
+  gateway-port: 8081
+
+pipeline:
+  name: data-pipeline
+  operators:
+    - name: source
+      type: source
+      table: kafka_source
+      parallelism: 2
+
+    - name: filter
+      type: filter
+      condition: age > 25
+      parallelism: 2
+
+    - name: map
+      type: map
+      expression:
+        - id: id
+        - name: name
+        - age: age
+        - salary: salary * 1.1
+        - processed_timestamp: CURRENT_TIMESTAMP
+      parallelism: 2
+
+    - name: aggregate
+      type: aggregate
+      group-by:
+        - department
+      aggregations:
+        - field: salary
+          function: SUM
+          alias: total_salary
+        - field: salary
+          function: AVG
+          alias: avg_salary
+        - field: id
+          function: COUNT
+          alias: employee_count
+      parallelism: 2
+
+    - name: window
+      type: window
+      window-type: tumbling
+      size: 60000
+      slide: 60000
+      time-field: timestamp
+      group-by:
+        - department
+      aggregations:
+        - field: salary
+          function: SUM
+          alias: window_total_salary
+      parallelism: 2
+
+    - name: join
+      type: join
+      left-table: kafka_source
+      right-table: jdbc_source
+      join-condition: kafka_source.id = jdbc_source.employee_id
+      join-type: inner
+      parallelism: 2
+
+    - name: sink
+      type: sink
+      table: kafka_sink
+      parallelism: 2
+
+catalog:
+  name: my_catalog
+  type: hive
+  hive-conf-dir: /path/to/hive/conf
+  default-database: default
+
+properties:
+  jobmanager.memory.process.size: 1600m
+  taskmanager.memory.process.size: 1728m
+  taskmanager.numberOfTaskSlots: 4
+  parallelism.default: 4
+  state.backend: rocksdb
+  state.checkpoints.dir: file:///tmp/flink-checkpoints
+  state.savepoints.dir: file:///tmp/flink-savepoints
+  rest.address: localhost
+  rest.port: 8081
+  high-availability: zookeeper
+  high-availability.zookeeper.quorum: localhost:2181
+  high-availability.cluster-id: /flink-cluster
+  high-availability.storageDir: hdfs:///flink/recovery
